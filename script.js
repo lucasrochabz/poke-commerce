@@ -2,67 +2,111 @@ const pokemonList = document.getElementById('pokemonList');
 const cart = document.getElementById('cart');
 const cartItems = [];
 
-listPokemonWithDetails = async () => {
+fetchPokemonUrls = async () => {
   try{
     const response = await fetch("https://pokeapi.co/api/v2/pokemon?limit=10");
     if(response.ok) {
       const data = await response.json();
       const pokemonUrls = data.results;
-  
-      pokemonList.innerHTML = '';
-
-      for(const pokemonUrl of pokemonUrls) {
-        const pokemonResponse = await fetch(pokemonUrl.url);
-        if(pokemonResponse.ok) {
-          const pokemonData = await pokemonResponse.json();
-          
-          const price = Math.floor(Math.random() * 100) + 1;
-          const listItem = createPokemonListItem(pokemonData, price);
-          pokemonList.appendChild(listItem);
-        }
-      }
+      return data.results.map(pokemon => pokemon.url);
     } else {
-      console.error('Erro ao buscar Pokémon.');
+      console.error('Erro ao buscar URLs de Pokémon.');
+      return [];
     }
   } catch (error) {
     console.log('Erro ao buscar Pokémon: ' + error);
+    return [];
+  }
+}
+
+fetchPokemonDetailsAndCreateListItem = async (pokemonUrl) => {
+  try {
+    const response = await fetch(pokemonUrl);
+    if(response.ok) {
+      pokemonData = await response.json();
+      const price = Math.floor(Math.random() * 100) + 1;
+      const listItem = createPokemonListItem(pokemonData, price);
+      pokemonList.appendChild(listItem);
+    } else {
+      console.error('Erro ao buscar detalhes do Pokémon.');
+    }
+  } catch (error) {
+    console.error('Erro ao buscar detalhes do Pokémon: ' + error);
+  }
+}
+
+listPokemonWithDetails = async () => {
+  try {
+    const pokemonUrls = await fetchPokemonUrls();
+    pokemonList.innerHTML = '';
+    for (const pokemonUrl of pokemonUrls) {
+      await fetchPokemonDetailsAndCreateListItem(pokemonUrl);
+    }
+  } catch (error) {
+    console.error('Erro ao buscar Pokémon com detalhes: ' + error);
   }
 }
 
 createPokemonListItem = (pokemonData, price) => {
   const listItem = document.createElement('li');
+  
+  const nameElement = createNameElement(pokemonData.name);
+  const idElement = createIdElement(pokemonData.id);
+  const typesElement = createTypesElement(pokemonData.types);
+  const imageElement = createImageElement(pokemonData.sprites.front_default, pokemonData.name);
+  const priceElement = createPriceElement(price);
+  const addButton = createAddButton(pokemonData.name, price);
 
+  appendElements(listItem, [nameElement, idElement, typesElement, imageElement, priceElement, addButton]);
+  
+  return listItem;
+}
+
+createNameElement = (name) => {
   const nameElement = document.createElement('h2');
-  nameElement.innerText = pokemonData.name;
+  nameElement.innerText = name;
+  return nameElement;
+}
 
+createIdElement = (id) => {
   const idElement = document.createElement('p');
-  idElement.innerText = `ID: ${pokemonData.id}`;
+  idElement.innerText = `ID: ${id}`;
+  return idElement;
+}
 
+createTypesElement = (types) => {
   const typesElement = document.createElement('p');
-  const types = pokemonData.types.map(type => type.type.name).join(', ');
-  typesElement.innerText = `Tipos: ${types}`;
+  const typesNames = types.map(type => type.type.name).join(', ');
+  typesElement.innerText = `Tipos: ${typesNames}`;
+  return typesElement;
+}
 
+createImageElement = (src, alt) => {
   const imageElement = document.createElement('img');
-  imageElement.src = pokemonData.sprites.front_default;
-  imageElement.alt = pokemonData.name;
+  imageElement.src = src;
+  imageElement.alt = alt;
+  return imageElement;
+}
 
+createPriceElement = (price) => {
   const priceElement = document.createElement('p');
-  priceElement.innerText = `Preço: R${price}`;
+  priceElement.innerText = `Preço: R$${price}`;
+  return priceElement;
+}
 
+createAddButton = (pokemonName, price) => {
   const addButton = document.createElement('button');
   addButton.innerText = 'Adicionar ao carrinho';
   addButton.addEventListener('click', () => {
-    addToCart(pokemonData.name, price);
+    addToCart(pokemonName, price);
   });
+  return addButton;
+}
 
-  listItem.appendChild(nameElement);
-  listItem.appendChild(idElement);
-  listItem.appendChild(typesElement);
-  listItem.appendChild(imageElement);
-  listItem.appendChild(priceElement);
-  listItem.appendChild(addButton);
-
-  return listItem;
+appendElements = (parent, elements) => {
+  elements.forEach(element => {
+    parent.appendChild(element);
+  });
 }
 
 addToCart = (pokemonName, price) => {
